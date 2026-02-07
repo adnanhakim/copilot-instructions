@@ -46,21 +46,21 @@ public class UserService {
         if (dto.email() == null || !dto.email().contains("@")) {
             throw new IllegalArgumentException("Invalid email");
         }
-        
+
         // Persistence
         Connection conn = DriverManager.getConnection(url);
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO users...");
         // ... JDBC code
-        
+
         // Email sending
         Session session = Session.getInstance(props);
         MimeMessage message = new MimeMessage(session);
         // ... Email code
-        
+
         // Logging
         FileWriter fw = new FileWriter("users.log");
         // ... File I/O
-        
+
         return user;
     }
 }
@@ -148,13 +148,13 @@ public class OrderService {
 public abstract class Document {
     public abstract void save();
     public abstract String getContent();
-    
+
     public final void process() {
         validate();
         save();
         log();
     }
-    
+
     protected abstract void validate();
     protected void log() {
         // Default logging
@@ -166,12 +166,12 @@ public class PdfDocument extends Document {
     public void save() {
         // Save as PDF
     }
-    
+
     @Override
     public String getContent() {
         return extractPdfContent();
     }
-    
+
     @Override
     protected void validate() {
         // PDF-specific validation
@@ -262,10 +262,10 @@ public class ReadOnlyDocument implements Readable {
 public class FullAccessDocument implements Readable, Writable, Deletable {
     @Override
     public String read() { return content; }
-    
+
     @Override
     public void write(String content) { this.content = content; }
-    
+
     @Override
     public void delete() { this.content = null; }
 }
@@ -293,27 +293,27 @@ public class ReadOnlyDocument implements DocumentOperations {
     public String read() {
         return content;
     }
-    
+
     @Override
     public void write(String content) {
         throw new UnsupportedOperationException();  // Forced to implement
     }
-    
+
     @Override
     public void delete() {
         throw new UnsupportedOperationException();  // Not needed
     }
-    
+
     @Override
     public void encrypt() {
         throw new UnsupportedOperationException();  // Not needed
     }
-    
+
     @Override
     public void compress() {
         throw new UnsupportedOperationException();  // Not needed
     }
-    
+
     @Override
     public void share() {
         throw new UnsupportedOperationException();  // Not needed
@@ -356,12 +356,12 @@ public class SmsNotificationService implements NotificationService {
 @Service
 public class OrderService {
     private final NotificationService notificationService;
-    
+
     // Depends on abstraction, not concrete class
     public OrderService(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
-    
+
     public void placeOrder(Order order) {
         // Business logic
         notificationService.send(order.getCustomerEmail(), "Order placed");
@@ -380,11 +380,11 @@ public class OrderService {
 @Service
 public class OrderService {
     private final EmailNotificationService emailService;  // Concrete dependency
-    
+
     public OrderService() {
         this.emailService = new EmailNotificationService();  // Direct instantiation
     }
-    
+
     public void placeOrder(Order order) {
         // Business logic
         emailService.sendEmail(order.getCustomerEmail(), "Order placed");
@@ -422,13 +422,13 @@ public class UserService {
     private final Logger logger;
     private final Validator validator;
     private final UserRepository repository;
-    
+
     public UserService(Logger logger, Validator validator, UserRepository repository) {
         this.logger = logger;
         this.validator = validator;
         this.repository = repository;
     }
-    
+
     public User createUser(UserDto dto) {
         validator.validate(dto);
         logger.log("Creating user: " + dto.username());
@@ -484,7 +484,7 @@ public record Money(BigDecimal amount, Currency currency) {
         }
         Objects.requireNonNull(currency, "Currency required");
     }
-    
+
     public Money add(Money other) {
         if (!this.currency.equals(other.currency)) {
             throw new IllegalArgumentException("Currency mismatch");
@@ -497,19 +497,19 @@ public record Money(BigDecimal amount, Currency currency) {
 public class BankAccount {
     private final String accountNumber;
     private BigDecimal balance;  // Private, controlled access
-    
+
     public BankAccount(String accountNumber, BigDecimal initialBalance) {
         this.accountNumber = accountNumber;
         this.balance = initialBalance;
     }
-    
+
     public void deposit(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit must be positive");
         }
         this.balance = this.balance.add(amount);
     }
-    
+
     public BigDecimal getBalance() {
         return balance;  // Returns copy (BigDecimal is immutable)
     }
@@ -527,10 +527,10 @@ public class BankAccount {
 public class BankAccount {
     public String accountNumber;  // Anyone can modify
     public BigDecimal balance;     // No validation possible
-    
+
     // Getter exposes mutable collection
     private List<Transaction> transactions = new ArrayList<>();
-    
+
     public List<Transaction> getTransactions() {
         return transactions;  // Caller can modify internal list!
     }
@@ -547,8 +547,144 @@ account.getTransactions().clear();  // Oops, deleted all transactions
 **Why it's wrong:** No control over state, invariants can't be enforced, internal changes break clients.
 
 **Fix:**
+
 ```java
 public List<Transaction> getTransactions() {
     return Collections.unmodifiableList(transactions);  // Or List.copyOf(transactions)
 }
 ```
+
+---
+
+## 8. Sealed Classes and Pattern Matching (Java 17+)
+
+### ✅ DO: Use sealed classes for controlled hierarchies
+
+```java
+// DO: Sealed interface for known implementations
+public sealed interface PaymentMethod
+    permits CreditCard, PayPal, BankTransfer, Crypto {
+
+    String processPayment(BigDecimal amount);
+}
+
+public record CreditCard(String cardNumber, String cvv, YearMonth expiry)
+    implements PaymentMethod {
+
+    @Override
+    public String processPayment(BigDecimal amount) {
+        return processCardPayment(amount);
+    }
+}
+
+public record PayPal(String email) implements PaymentMethod {
+    @Override
+    public String processPayment(BigDecimal amount) {
+        return processPayPalPayment(amount);
+    }
+}
+
+public record BankTransfer(String iban, String bic) implements PaymentMethod {
+    @Override
+    public String processPayment(BigDecimal amount) {
+        return processBankTransfer(amount);
+    }
+}
+
+public record Crypto(String walletAddress, CryptoType type) implements PaymentMethod {
+    @Override
+    public String processPayment(BigDecimal amount) {
+        return processCryptoPayment(amount);
+    }
+}
+
+// DO: Pattern matching with exhaustive switch (Java 21)
+@Service
+public class PaymentService {
+
+    public PaymentResult process(PaymentMethod method, BigDecimal amount) {
+        return switch (method) {
+            case CreditCard card -> processCreditCard(card, amount);
+            case PayPal paypal -> processPayPal(paypal, amount);
+            case BankTransfer transfer -> processBankTransfer(transfer, amount);
+            case Crypto crypto -> processCrypto(crypto, amount);
+            // No default needed - compiler ensures exhaustiveness!
+        };
+    }
+
+    // Guarded patterns
+    public BigDecimal calculateFee(PaymentMethod method, BigDecimal amount) {
+        return switch (method) {
+            case CreditCard card when card.cardNumber().startsWith("4") ->
+                amount.multiply(new BigDecimal("0.015"));  // Visa: 1.5%
+            case CreditCard card when card.cardNumber().startsWith("5") ->
+                amount.multiply(new BigDecimal("0.02"));   // Mastercard: 2%
+            case CreditCard card ->
+                amount.multiply(new BigDecimal("0.025"));  // Other: 2.5%
+            case PayPal _ -> amount.multiply(new BigDecimal("0.029"));
+            case BankTransfer _ -> new BigDecimal("0.50");  // Flat fee
+            case Crypto _ -> amount.multiply(new BigDecimal("0.01"));
+        };
+    }
+}
+
+// DO: Sealed classes for state machines
+public sealed interface OrderState
+    permits Pending, Confirmed, Shipped, Delivered, Cancelled {
+}
+
+public record Pending(LocalDateTime createdAt) implements OrderState {}
+public record Confirmed(LocalDateTime confirmedAt, String paymentId) implements OrderState {}
+public record Shipped(LocalDateTime shippedAt, String trackingNumber) implements OrderState {}
+public record Delivered(LocalDateTime deliveredAt) implements OrderState {}
+public record Cancelled(LocalDateTime cancelledAt, String reason) implements OrderState {}
+
+public class Order {
+    private OrderState state = new Pending(LocalDateTime.now());
+
+    public boolean canCancel() {
+        return switch (state) {
+            case Pending _, Confirmed _ -> true;
+            case Shipped _, Delivered _, Cancelled _ -> false;
+        };
+    }
+}
+```
+
+**When to use:**
+
+- Modeling finite state machines
+- Payment/notification types
+- API response variants
+- Domain objects with known subtypes
+
+### ❌ DON'T: Use if/else chains for type checking
+
+```java
+// DON'T: Manual type checking
+public BigDecimal calculateFee(Object payment) {
+    if (payment instanceof CreditCard) {
+        CreditCard card = (CreditCard) payment;
+        return processCreditCardFee(card);
+    } else if (payment instanceof PayPal) {
+        return processPayPalFee((PayPal) payment);
+    } else if (payment instanceof BankTransfer) {
+        return processBankTransferFee((BankTransfer) payment);
+    }
+    throw new IllegalArgumentException("Unknown payment type");
+}
+// Problems: Verbose, no compile-time exhaustiveness, can miss new types
+
+// Better: Pattern matching with sealed types
+public BigDecimal calculateFee(PaymentMethod payment) {
+    return switch (payment) {
+        case CreditCard card -> processCreditCardFee(card);
+        case PayPal paypal -> processPayPalFee(paypal);
+        case BankTransfer transfer -> processBankTransferFee(transfer);
+        case Crypto crypto -> processCryptoFee(crypto);
+        // Compile error if you forget a type!
+    };
+}
+```
+
+**Why it's wrong:** No compile-time safety, easy to forget cases when adding new types.
