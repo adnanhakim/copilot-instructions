@@ -32,15 +32,18 @@ spring-boot/
     ├── concurrency.md                # Virtual threads, async, thread safety
     ├── configuration.md              # @ConfigurationProperties, profiles
     ├── data-access.md                # JPA, repositories, transactions
+    ├── date-time.md                  # java.time API, timezones, formatting
     ├── dependency-injection.md       # DI patterns, bean scopes
     ├── error-handling.md             # Exceptions, @ControllerAdvice
     ├── memory-management.md          # Resource cleanup, optimization
     ├── observability.md              # Logging, metrics, tracing
     ├── oop-principles.md             # SOLID, composition, encapsulation
+    ├── resilience.md                 # Circuit breakers, retries, timeouts
     ├── rest-api-design.md            # Controllers, DTOs, versioning
     ├── security.md                   # Spring Security 6.x, JWT, CORS
     ├── streams-lambdas.md            # Functional patterns, Optional
-    └── testing.md                    # JUnit 5, Testcontainers, slices
+    ├── testing.md                    # JUnit 5, Testcontainers, slices
+    └── transactions.md               # @Transactional, propagation, rollback
 ```
 
 ## 🚀 Quick Start
@@ -89,16 +92,19 @@ Simply include the relevant markdown files in your project or paste the content 
 - **[Error Handling](./copilot-rules/error-handling.md)** – Exception hierarchies, @ControllerAdvice
 - **[Concurrency](./copilot-rules/concurrency.md)** – Virtual threads, scoped values, CompletableFuture
 - **[Memory Management](./copilot-rules/memory-management.md)** – Resource cleanup, GC-friendly code
+- **[Date & Time](./copilot-rules/date-time.md)** – java.time API, timezones, formatting
 
 ### Spring Boot
 
 - **[Dependency Injection](./copilot-rules/dependency-injection.md)** – Constructor injection, scopes
 - **[REST API Design](./copilot-rules/rest-api-design.md)** – Controllers, DTOs, RFC 7807 errors
 - **[Data Access](./copilot-rules/data-access.md)** – JPA, repositories, N+1 prevention
+- **[Transactions](./copilot-rules/transactions.md)** – @Transactional, propagation, isolation
 - **[Configuration](./copilot-rules/configuration.md)** – Type-safe config, profiles
 - **[Security](./copilot-rules/security.md)** – Spring Security 6.x, JWT, CORS
 - **[Testing](./copilot-rules/testing.md)** – JUnit 5, Testcontainers, slice tests
 - **[Observability](./copilot-rules/observability.md)** – Logging, metrics, tracing
+- **[Resilience](./copilot-rules/resilience.md)** – Circuit breakers, retries, bulkheads
 
 ## 💡 Example Patterns
 
